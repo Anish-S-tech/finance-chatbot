@@ -18,7 +18,6 @@ client = OpenAI(
 # --- Streamlit Page Config ---
 st.set_page_config(
     page_title="Finance Chatbot",
-    page_icon="💰",
     layout="centered"
 )
 
@@ -73,7 +72,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Title ---
-st.title("💸 Finance Chatbot (Powered by Fireworks)")
+st.title("Intelligent Finance Assistant")
 
 # --- Session state for chat history ---
 if "history" not in st.session_state:
