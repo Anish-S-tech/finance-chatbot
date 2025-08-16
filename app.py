@@ -85,4 +85,4 @@ with col2:
 if send_button and user_input:
     ai_reply = generate_response(user_input, st.session_state.history)
     st.session_state.history.append((user_input, ai_reply))
-    st.experimental_rerun()  # works as long as your version supports it, otherwise st.rerun()
+    st.rerun()  # works as long as your version supports it, otherwise st.rerun()
