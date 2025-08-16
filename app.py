@@ -1,58 +1,85 @@
 import streamlit as st
 from openai import OpenAI
 
-# Secret values
+# --- Secrets / config access ---
+# st.secrets is expected to have keys: LLM_API_KEY, API_BASE_URL, MODEL_ID
 LLM_API_KEY = st.secrets["LLM_API_KEY"]
 API_BASE_URL = st.secrets["API_BASE_URL"]
 MODEL_ID = st.secrets["MODEL_ID"]
+
 SYSTEM_PROMPT = st.secrets.get("SYSTEM_PROMPT", "You are a helpful finance assistant.")
 
-client = OpenAI(base_url=API_BASE_URL, api_key=LLM_API_KEY)
-
-st.set_page_config(
-    page_title="Finance Chatbot",
-    layout="wide"
+# --- Initialize client (Fireworks but OpenAI compatible) ---
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=LLM_API_KEY
 )
 
-# Inject some CSS for modern look
-st.markdown(
-    """
+# --- Streamlit Page Config ---
+st.set_page_config(
+    page_title="Finance Chatbot",
+    page_icon="💰",
+    layout="centered"
+)
+
+# --- Custom CSS for Professional Look ---
+st.markdown("""
     <style>
+    body, .stApp {
+        background-color: #ffffff;
+        color: #1a1a1a;
+        font-family: 'Helvetica', sans-serif;
+    }
     .chat-container {
-        max-height: 500px;
+        max-height: 550px;
         overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 10px;
-        background-color: #f9f9f9;
+        padding: 12px;
+        border: 1px solid #cccccc;
+        border-radius: 6px;
+        background-color: #fdfdfd;
     }
     .user-bubble {
-        background-color: #DCF3FF;
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
+        background-color: #e7f0f9;
+        color: #0a0a0a;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 6px;
         align-self: flex-end;
+        border: 1px solid #c3dff2;
         max-width: 80%;
     }
     .ai-bubble {
-        background-color: #E8E4FF;
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
+        background-color: #f2f2f2;
+        color: #0a0a0a;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 6px;
         align-self: flex-start;
+        border: 1px solid #dedede;
         max-width: 80%;
     }
+    .stTextInput>div>div>input{
+        background-color:#ffffff !important;
+        border:1px solid #cccccc !important;
+        color:#1a1a1a !important;
+    }
+    .stButton>button{
+        background-color:#004080;
+        color:white;
+        border:none;
+        border-radius:4px;
+    }
     </style>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
-st.title("Interactive Finance Assistant")
+# --- Title ---
+st.title("💸 Finance Chatbot (Powered by Fireworks)")
 
-# Initialize conversation history
+# --- Session state for chat history ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
+# --- Generate response function ---
 def generate_response(message, history_list):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for u_msg, a_msg in history_list:
@@ -66,23 +93,21 @@ def generate_response(message, history_list):
     )
     return response.choices[0].message.content
 
+# --- UI input ---
+user_input = st.text_input("Ask a financial question", key="input")
+send_button = st.button("Send")
 
-# Chat UI container
-with st.container():
-    st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-    for u, a in st.session_state.history:
-        st.markdown(f"<div class='user-bubble'><strong>You:</strong> {u}</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='ai-bubble'><strong>Bot:</strong> {a}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# Input section
-col1, col2 = st.columns([5,1])
-with col1:
-    user_input = st.text_input("Type your question:", key="input", label_visibility="collapsed")
-with col2:
-    send_button = st.button("Send", use_container_width=True)
-
+# --- On Send ---
 if send_button and user_input:
-    ai_reply = generate_response(user_input, st.session_state.history)
-    st.session_state.history.append((user_input, ai_reply))
-    st.rerun()  # works as long as your version supports it, otherwise st.rerun()
+    assistant_reply = generate_response(user_input, st.session_state.history)
+    st.session_state.history.append((user_input, assistant_reply))
+    st.rerun()
+
+# --- Display chat with custom bubble classes ---
+st.write("")  # small spacer
+
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+for user_msg, ai_msg in st.session_state.history:
+    st.markdown(f'<div class="user-bubble">You: {user_msg}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="ai-bubble">Assistant: {ai_msg}</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
