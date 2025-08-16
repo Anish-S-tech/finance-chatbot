@@ -1,35 +1,59 @@
 import streamlit as st
 from openai import OpenAI
 
-# These will be read from your secrets (via Streamlit Cloud secrets or HuggingFace Secrets)
-LLM_API_KEY = st.secrets["LLM_API_KEY"]  # Fireworks API key!
+# Secret values
+LLM_API_KEY = st.secrets["LLM_API_KEY"]
 API_BASE_URL = st.secrets["API_BASE_URL"]
 MODEL_ID = st.secrets["MODEL_ID"]
 SYSTEM_PROMPT = st.secrets.get("SYSTEM_PROMPT", "You are a helpful finance assistant.")
 
-# Initialize Fireworks/OpenAI-compatible client
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=LLM_API_KEY
-)
+client = OpenAI(base_url=API_BASE_URL, api_key=LLM_API_KEY)
 
 st.set_page_config(
-    page_title="Finance Chatbot (Fireworks/Mixtral)",
-    page_icon="💰",
-    layout="centered"
+    page_title="Finance Chatbot",
+    layout="wide"
 )
 
-st.title("💸 Finance Chatbot (Fireworks Models)")
+# Inject some CSS for modern look
+st.markdown(
+    """
+    <style>
+    .chat-container {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+    }
+    .user-bubble {
+        background-color: #DCF3FF;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        align-self: flex-end;
+        max-width: 80%;
+    }
+    .ai-bubble {
+        background-color: #E8E4FF;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        align-self: flex-start;
+        max-width: 80%;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# Session state to keep history
+st.title("Interactive Finance Assistant")
+
+# Initialize conversation history
 if "history" not in st.session_state:
     st.session_state.history = []
 
-user_input = st.text_input("Ask me a finance question:", key="input")
-send_button = st.button("Send")
-
 def generate_response(message, history_list):
-    # Build messages with conversation memory
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for u_msg, a_msg in history_list:
         messages.append({"role": "user", "content": u_msg})
@@ -42,13 +66,23 @@ def generate_response(message, history_list):
     )
     return response.choices[0].message.content
 
-if send_button and user_input:
-    assistant_reply = generate_response(user_input, st.session_state.history)
-    st.session_state.history.append((user_input, assistant_reply))
-    st.rerun()
 
-# Display chat history (simple)
-for user_msg, ai_msg in st.session_state.history:
-    st.write("**You:**", user_msg)
-    st.write("**Assistant:**", ai_msg)
-    st.write("---")
+# Chat UI container
+with st.container():
+    st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+    for u, a in st.session_state.history:
+        st.markdown(f"<div class='user-bubble'><strong>You:</strong> {u}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='ai-bubble'><strong>Bot:</strong> {a}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# Input section
+col1, col2 = st.columns([5,1])
+with col1:
+    user_input = st.text_input("Type your question:", key="input", label_visibility="collapsed")
+with col2:
+    send_button = st.button("Send", use_container_width=True)
+
+if send_button and user_input:
+    ai_reply = generate_response(user_input, st.session_state.history)
+    st.session_state.history.append((user_input, ai_reply))
+    st.experimental_rerun()  # works as long as your version supports it, otherwise st.rerun()
