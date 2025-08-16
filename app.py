@@ -45,7 +45,7 @@ def generate_response(message, history_list):
 if send_button and user_input:
     assistant_reply = generate_response(user_input, st.session_state.history)
     st.session_state.history.append((user_input, assistant_reply))
-    st.experimental_rerun()
+    st.rerun()
 
 # Display chat history (simple)
 for user_msg, ai_msg in st.session_state.history:
