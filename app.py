@@ -21,7 +21,7 @@ MODEL_GEMMA = st.secrets.get("MODEL_GEMMA")
 MODEL_OPTIONS = {
     "DeepSeek V3": MODEL_DEEPSEEK,
     "Mistral 7B": MODEL_MISTRAL,
-    "Gemma 7B IT": MODEL_GEMMA
+    "Llama 3.1": MODEL_GEMMA
 }
 
 # Initialize client
@@ -34,12 +34,11 @@ client = OpenAI(
 
 st.set_page_config(
     page_title="Finance Chatbot",
-    page_icon="💵",
     layout="centered",
 )
 
 st.markdown(
-    "<h1 style='text-align:center; color:#0c3c60;'>💸 Finance AI Chatbot</h1>",
+    "<h1 style='text-align:center; color:#0c3c60;'> Finance AI Chatbot</h1>",
     unsafe_allow_html=True
 )
 
