@@ -20,7 +20,7 @@ MODEL_GEMMA = st.secrets.get("MODEL_GEMMA")
 
 MODEL_OPTIONS = {
     "DeepSeek V3": MODEL_DEEPSEEK,
-    "Mistral 7B": MODEL_MISTRAL,
+    "GPT-OSS 120B": MODEL_MISTRAL,
     "Llama 3.1": MODEL_GEMMA
 }
 
