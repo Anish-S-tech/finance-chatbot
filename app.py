@@ -1,91 +1,88 @@
+# app.py
+
 import streamlit as st
 from openai import OpenAI
 
-# Load credentials and model IDs from secrets
-LLM_API_KEY   = st.secrets["LLM_API_KEY"]
-API_BASE_URL  = st.secrets["API_BASE_URL"]
-SYSTEM_PROMPT = st.secrets["SYSTEM_PROMPT"]
+# =================== Configuration ===================
 
-MODEL_DEEPSEEK = st.secrets["MODEL_DEEPSEEK"]
-MODEL_MISTRAL  = st.secrets["MODEL_MISTRAL"]
-MODEL_GEMMA    = st.secrets["MODEL_GEMMA"]
+LLM_API_KEY = st.secrets["LLM_API_KEY"]
+API_BASE_URL = st.secrets["API_BASE_URL"]
 
-# Initialize LLM client (Fireworks)
+SYSTEM_PROMPT = st.secrets.get(
+    "SYSTEM_PROMPT",
+    "You are a knowledgeable, friendly finance assistant. Always answer clearly and professionally."
+)
+
+# Use the Fireworks-style model IDs provided in secrets
+MODEL_DEEPSEEK = st.secrets.get("MODEL_DEEPSEEK")
+MODEL_MISTRAL = st.secrets.get("MODEL_MISTRAL")
+MODEL_GEMMA = st.secrets.get("MODEL_GEMMA")
+
+MODEL_OPTIONS = {
+    "DeepSeek V3": MODEL_DEEPSEEK,
+    "Mistral 7B": MODEL_MISTRAL,
+    "Gemma 7B IT": MODEL_GEMMA
+}
+
+# Initialize client
 client = OpenAI(
     base_url=API_BASE_URL,
     api_key=LLM_API_KEY
 )
 
-# Custom style (corporate blue/gray)
+# =====================================================
+
 st.set_page_config(
-    page_title="Finance Chatbot - MultiModel",
-    layout="centered"
+    page_title="Finance Chatbot",
+    page_icon="💵",
+    layout="centered",
 )
 
 st.markdown(
-    """
-    <style>
-    body { background-color: #f4f6f9; }
-    .stApp { font-family: Arial, sans-serif; }
-    .title { font-size: 32px; color: #083358; font-weight: bold; text-align: center; }
-    .credit { font-size: 10px; text-align: center; margin-top: 20px; color: #888; }
-    </style>
-    """,
+    "<h1 style='text-align:center; color:#0c3c60;'>💸 Finance AI Chatbot</h1>",
     unsafe_allow_html=True
 )
 
-st.markdown('<div class="title"> Finance Chatbot (Multi-Model)</div>', unsafe_allow_html=True)
+# Model Selection
+model_label = st.selectbox(
+    "Select Model:",
+    list(MODEL_OPTIONS.keys())
+)
 
-st.markdown("Ask about investments, markets, loans, or general finance. The model will adjust based on your tone or topic.")
-
-# Initialize session
+# Initialize history
 if "history" not in st.session_state:
     st.session_state.history = []
 
-def choose_model(user_message: str) -> str:
-    """Simple routing logic by keyword or emotional tone."""
-    msg = user_message.lower()
-
-    # Keywords about emotion or sentiment
-    if any(w in msg for w in ["sad", "depressed", "happy", "excited", "emotion", "feeling"]):
-        return MODEL_GEMMA  # more emotional
-
-    # Keywords about technical finance queries
-    if any(w in msg for w in ["stock", "investment", "loan", "mutual fund", "returns", "roi", "nifty", "sensex"]):
-        return MODEL_DEEPSEEK
-
-    # Default general finance advice
-    return MODEL_MISTRAL
-
-def generate_response(message, history):
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-
-    for u, a in history:
-        messages.append({"role": "user", "content": u})
-        messages.append({"role": "assistant", "content": a})
-
-    messages.append({"role": "user", "content": message})
-
-    model_to_use = choose_model(message)
-
-    response = client.chat.completions.create(
-        model = model_to_use,
-        messages = messages
-    )
-    return response.choices[0].message.content
-
-# Input field
-user_input = st.text_input("Your question:")
+# User input
+user_input = st.text_input(
+    "Your finance question:",
+    key="user_input"
+)
 
 if st.button("Send") and user_input:
+    selected_model_id = MODEL_OPTIONS[model_label]
+
+    def generate_response(message, history):
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for u_msg, a_msg in history:
+            messages.append({"role": "user", "content": u_msg})
+            messages.append({"role": "assistant", "content": a_msg})
+
+        messages.append({"role": "user", "content": message})
+
+        response = client.chat.completions.create(
+            model=selected_model_id,
+            messages=messages
+        )
+        return response.choices[0].message.content
+
     reply = generate_response(user_input, st.session_state.history)
     st.session_state.history.append((user_input, reply))
-    user_input = ""  # reset
+    user_input = ""
 
-# Display chat history
-for u, r in st.session_state.history:
-    st.write(f"**You:** {u}")
-    st.write(f"**Assistant:** {r}")
-    st.write("---")
 
-st.markdown('<div class="credit">Powered by Fireworks AI • Models: Mistral, DeepSeek, Gemma</div>', unsafe_allow_html=True)
+# Show chat
+for u_msg, a_msg in st.session_state.history:
+    st.markdown(f"**You:** {u_msg}")
+    st.markdown(f"**Assistant:** {a_msg}")
+    st.markdown("---")
