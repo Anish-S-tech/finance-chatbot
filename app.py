@@ -1,112 +1,91 @@
 import streamlit as st
 from openai import OpenAI
 
-# --- Secrets / config access ---
-# st.secrets is expected to have keys: LLM_API_KEY, API_BASE_URL, MODEL_ID
-LLM_API_KEY = st.secrets["LLM_API_KEY"]
-API_BASE_URL = st.secrets["API_BASE_URL"]
-MODEL_ID = st.secrets["MODEL_ID"]
+# Load credentials and model IDs from secrets
+LLM_API_KEY   = st.secrets["LLM_API_KEY"]
+API_BASE_URL  = st.secrets["API_BASE_URL"]
+SYSTEM_PROMPT = st.secrets["SYSTEM_PROMPT"]
 
-SYSTEM_PROMPT = st.secrets.get("SYSTEM_PROMPT", "You are a helpful finance assistant.")
+MODEL_DEEPSEEK = st.secrets["MODEL_DEEPSEEK"]
+MODEL_MISTRAL  = st.secrets["MODEL_MISTRAL"]
+MODEL_GEMMA    = st.secrets["MODEL_GEMMA"]
 
-# --- Initialize client (Fireworks but OpenAI compatible) ---
+# Initialize LLM client (Fireworks)
 client = OpenAI(
     base_url=API_BASE_URL,
     api_key=LLM_API_KEY
 )
 
-# --- Streamlit Page Config ---
+# Custom style (corporate blue/gray)
 st.set_page_config(
-    page_title="Finance Chatbot",
+    page_title="Finance Chatbot - MultiModel",
     layout="centered"
 )
 
-# --- Custom CSS for Professional Look ---
-st.markdown("""
+st.markdown(
+    """
     <style>
-    body, .stApp {
-        background-color: #ffffff;
-        color: #1a1a1a;
-        font-family: 'Helvetica', sans-serif;
-    }
-    .chat-container {
-        max-height: 550px;
-        overflow-y: auto;
-        padding: 12px;
-        border: 1px solid #cccccc;
-        border-radius: 6px;
-        background-color: #fdfdfd;
-    }
-    .user-bubble {
-        background-color: #e7f0f9;
-        color: #0a0a0a;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 6px;
-        align-self: flex-end;
-        border: 1px solid #c3dff2;
-        max-width: 80%;
-    }
-    .ai-bubble {
-        background-color: #f2f2f2;
-        color: #0a0a0a;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 6px;
-        align-self: flex-start;
-        border: 1px solid #dedede;
-        max-width: 80%;
-    }
-    .stTextInput>div>div>input{
-        background-color:#ffffff !important;
-        border:1px solid #cccccc !important;
-        color:#1a1a1a !important;
-    }
-    .stButton>button{
-        background-color:#004080;
-        color:white;
-        border:none;
-        border-radius:4px;
-    }
+    body { background-color: #f4f6f9; }
+    .stApp { font-family: Arial, sans-serif; }
+    .title { font-size: 32px; color: #083358; font-weight: bold; text-align: center; }
+    .credit { font-size: 10px; text-align: center; margin-top: 20px; color: #888; }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
-# --- Title ---
-st.title("Intelligent Finance Assistant")
+st.markdown('<div class="title"> Finance Chatbot (Multi-Model)</div>', unsafe_allow_html=True)
 
-# --- Session state for chat history ---
+st.markdown("Ask about investments, markets, loans, or general finance. The model will adjust based on your tone or topic.")
+
+# Initialize session
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# --- Generate response function ---
-def generate_response(message, history_list):
+def choose_model(user_message: str) -> str:
+    """Simple routing logic by keyword or emotional tone."""
+    msg = user_message.lower()
+
+    # Keywords about emotion or sentiment
+    if any(w in msg for w in ["sad", "depressed", "happy", "excited", "emotion", "feeling"]):
+        return MODEL_GEMMA  # more emotional
+
+    # Keywords about technical finance queries
+    if any(w in msg for w in ["stock", "investment", "loan", "mutual fund", "returns", "roi", "nifty", "sensex"]):
+        return MODEL_DEEPSEEK
+
+    # Default general finance advice
+    return MODEL_MISTRAL
+
+def generate_response(message, history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for u_msg, a_msg in history_list:
-        messages.append({"role": "user", "content": u_msg})
-        messages.append({"role": "assistant", "content": a_msg})
+
+    for u, a in history:
+        messages.append({"role": "user", "content": u})
+        messages.append({"role": "assistant", "content": a})
+
     messages.append({"role": "user", "content": message})
 
+    model_to_use = choose_model(message)
+
     response = client.chat.completions.create(
-        model=MODEL_ID,
-        messages=messages
+        model = model_to_use,
+        messages = messages
     )
     return response.choices[0].message.content
 
-# --- UI input ---
-user_input = st.text_input("Ask a financial question", key="input")
-send_button = st.button("Send")
+# Input field
+user_input = st.text_input("Your question:")
 
-# --- On Send ---
-if send_button and user_input:
-    assistant_reply = generate_response(user_input, st.session_state.history)
-    st.session_state.history.append((user_input, assistant_reply))
-    st.rerun()
+if st.button("Send") and user_input:
+    reply = generate_response(user_input, st.session_state.history)
+    st.session_state.history.append((user_input, reply))
+    user_input = ""  # reset
 
-# --- Display chat with custom bubble classes ---
-st.write("")  # small spacer
+# Display chat history
+for u, r in st.session_state.history:
+    st.write(f"**You:** {u}")
+    st.write(f"**Assistant:** {r}")
+    st.write("---")
 
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-for user_msg, ai_msg in st.session_state.history:
-    st.markdown(f'<div class="user-bubble">You: {user_msg}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="ai-bubble">Assistant: {ai_msg}</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="credit">Powered by Fireworks AI • Models: Mistral, DeepSeek, Gemma</div>', unsafe_allow_html=True)
