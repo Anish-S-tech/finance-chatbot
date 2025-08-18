@@ -40,41 +40,40 @@ model_id_map = {
     "LLaMA 3.1": MODEL_LLAMA,
 }
 
-# Initialize history
+# Initialize chat history
 if "history" not in st.session_state:
     st.session_state.history = []
 
 def chat_model_call(user_message, history, model_id):
-    # Build message structure for OpenAI/FW
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for (u, a) in history:
         messages.append({"role": "user", "content": u})
         messages.append({"role": "assistant", "content": a})
     messages.append({"role": "user", "content": user_message})
 
-    # API Call
     response = client.chat.completions.create(
         model=model_id,
         messages=messages
     )
     return response.choices[0].message.content.strip()
 
-# Chat UI
-container = st.container()
-with container:
-    for u, a in st.session_state.history:
-        st.markdown(f"**You:** {u}")
-        st.markdown(f"<div style='color: #1e88e5;'><strong>Assistant:</strong> {a}</div>", unsafe_allow_html=True)
-        st.markdown("---")
 
-    # Input box
-    user_input = st.text_input("Your question:")
-    if st.button("Send") and user_input:
-        selected_model_id = model_id_map[model_option]
-        try:
-            reply = chat_model_call(user_input, st.session_state.history, selected_model_id)
-        except Exception as e:
-            reply = f"⚠ Error: Model may not be accessible.\n{e}"
+# Display message history
+for u, a in st.session_state.history:
+    st.markdown(f"**You:** {u}")
+    st.markdown(f"**Assistant:** {a}")  # Now plain
 
-        st.session_state.history.append((user_input, reply))
-        st.rerun()  # force UI to refresh / show full history
+st.write("---")
+
+# User input + send button
+user_input = st.text_input("Your question:")
+if st.button("Send") and user_input:
+    selected_model_id = model_id_map[model_option]
+    try:
+        reply = chat_model_call(user_input, st.session_state.history, selected_model_id)
+    except Exception as e:
+        reply = f"⚠ Error: {e}"
+
+    st.session_state.history.append((user_input, reply))
+    st.rerun()
+
